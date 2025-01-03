@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"myls/helpers"
 	"os"
 )
 
@@ -13,23 +14,15 @@ func main() {
 		return
 	}
 
-	folder := "./"
+	folderPath := "./" // default folder
+	option := ""
 	if len(os.Args) == 3 {
-		folder = os.Args[2]
+		option = os.Args[1]
+		folderPath = os.Args[2]
+	} else if len(os.Args) == 2 {
+		option = os.Args[1]
+		folderPath = "./" // default folder
 	}
-	dir, err := os.Open(folder)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer dir.Close()
-	content, err := dir.Readdir(-1)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println("total", len(folder))
-	for _, fi := range content {
-		fmt.Println(fi.Name())
-	}
+	helpers.Ls(option, folderPath)
+
 }
