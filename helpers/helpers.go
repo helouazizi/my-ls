@@ -56,34 +56,63 @@ func checkFlag(falgs []string, flag string) (bool, error) {
 	}
 	return false, nil
 }
-func ExtractContent(folderPath string) ([]os.FileInfo, error) {
-	_, err := os.Stat(folderPath)
-	if err != nil {
-		return nil, fmt.Errorf("ls: cannot access '%s': No such file or directory", folderPath)
-	}
+func ExtractContent(folderPath string) ([]os.FileInfo, bool, error) {
 	dir, err := os.Open(folderPath)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer dir.Close()
 	content, err := dir.Readdir(-1)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return content, nil
+	FileInfo, err := os.Stat(folderPath)
+	if err != nil {
+		return nil, false, fmt.Errorf("ls: cannot access '%s': No such file or directory", folderPath)
+	}
+	if FileInfo.IsDir() {
+		return content, true, nil
+	}
+	return nil, false, nil
 }
-func PrintContent(flags []string, content []os.FileInfo) {
-	
+func PrintContent(flags []string, content []os.FileInfo) []string {
+	result := []string{}
+	for _, v := range content {
+		result = append(result, v.Name())
+		fmt.Println(v.Name())
+	}
+	return result
+}
+func R(folderPath string) {
+	content, isdir, err := ExtractContent(folderPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	folders := PrintContent(nil, content)
+	if isdir {
+		Ls(nil, folders)
+	}
+
 }
 
 func Ls(flags, foldersPath []string) {
+	Recursive := true
 	for _, folderPath := range foldersPath {
-		content, err := ExtractContent(folderPath)
-		if err != nil {
-			fmt.Println(err)
-			continue
+		content, isdir, err := ExtractContent(folderPath)
+		if !isdir {
+			// in this case is a file
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+		} else {
+			fmt.Println(folderPath, ":")
 		}
+
 		PrintContent(flags, content)
+		if isdir && Recursive {
+			R(folderPath)
+		}
 	}
 
 }
