@@ -10,47 +10,48 @@ import (
 )
 
 // Scan parses command-line arguments and extracts flags and folder paths.
-func Scan() ([]string, []string, error) {
+func Scan() (string, []string, error) {
 	foldersPath := []string{}
-	flags := []string{}
+	flags := ""
 	input := os.Args[1:]
 
 	for _, arg := range input {
 		if strings.HasPrefix(arg, "-") {
-			exist, err := checkFlag(flags, arg)
-			if err != nil {
-				return nil, nil, err
-			}
-			if !exist {
-				flags = append(flags, arg)
+			if len(arg) >= 2 && arg[1] == '-' && !strings.Contains(arg[2:], "-") {
+				flags += string(arg[:])
+			} else if len(arg) >= 1 && arg[0] == '-' && !strings.Contains(arg[1:], "-") {
+				flags += string(arg[:])
+			} else {
+				return "nil", nil, fmt.Errorf("my-ls: invalid option -- '%s'\nTry 'ls --help' for more information", arg[1:])
 			}
 		} else {
 			foldersPath = append(foldersPath, arg)
 		}
 	}
+	if len(flags) == 1 {
+		return "nil", nil, fmt.Errorf("my-ls: cannot access '%s': No such file or directory", flags)
+	}
+	status, err := checkFlag(flags)
+	if !status {
+		return "nil", nil, fmt.Errorf("my-ls: invalid option -- '%s'\nTry 'ls --help' for more information", err)
+	}
+
 	return flags, foldersPath, nil
 }
 
 // checkFlag validates flags and ensures they are not duplicated.
-func checkFlag(flags []string, flag string) (bool, error) {
+func checkFlag(flags string) (bool, string) {
+	patern := "aAbBcCdDfFgGhHiIklLmnNopqQrRsStTuUvwxXZ1"
+
 	for _, f := range flags {
-		if f == flag {
-			return true, nil
+
+		if !strings.Contains(patern, string(f)) {
+
+			return false, string(f)
 		}
 	}
 
-	// Validate flag format (e.g., no more than two dashes)
-	dashCount := 0
-	for _, char := range flag {
-		if dashCount > 2 {
-			return false, fmt.Errorf("my-ls: unrecognized option '%s'", flag)
-		}
-		if char == '-' {
-			dashCount++
-		}
-
-	}
-	return false, nil
+	return true, "test"
 }
 
 // ExtractContent retrieves the contents of a directory or file.
@@ -146,8 +147,8 @@ func R(folderPath string, flagsGrouped string) {
 }
 
 // Ls handles the main logic of listing files and directories.
-func Ls(flags, foldersPath []string) {
-	flagsGrouped := GroupFlags(flags)
+func Ls(flags string, foldersPath []string) {
+	//flagsGrouped := GroupFlags(flags)
 	for _, folderPath := range foldersPath {
 		content, isDir, err := ExtractContent(folderPath)
 		if err != nil {
@@ -155,11 +156,11 @@ func Ls(flags, foldersPath []string) {
 			continue
 		}
 
-		if isDir && containsFlag(flagsGrouped, "R") {
+		if isDir && containsFlag(flags, "R") {
 			//fmt.Printf("%s:\n", folderPath)
-			R(folderPath, flagsGrouped)
-		} else if isDir && !containsFlag(flagsGrouped, "R") {
-			PrintContent(flagsGrouped, content)
+			R(folderPath, flags)
+		} else if isDir && !containsFlag(flags, "R") {
+			PrintContent(flags, content)
 		}
 	}
 }

@@ -1,0 +1,3 @@
+list.txt
+work on the text flags
+becarefull --rec or --rev will be used to reverse the text
