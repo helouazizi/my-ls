@@ -56,12 +56,13 @@ func checkFlag(flags []string, flag string) (bool, error) {
 	// Validate flag format (e.g., no more than two dashes)
 	dashCount := 0
 	for _, char := range flag {
-		if char == '-' {
-			dashCount++
-		}
 		if dashCount > 2 {
 			return false, fmt.Errorf("my-ls: unrecognized option '%s'", flag)
 		}
+		if char == '-' {
+			dashCount++
+		}
+
 	}
 	return false, nil
 }
@@ -72,13 +73,13 @@ func ExtractContent(folderPath string) ([]os.FileInfo, bool, error) {
 	if err != nil {
 		return nil, false, fmt.Errorf("my-ls: cannot access '%s': No such file or directory", folderPath)
 	}
-
 	if !fileInfo.IsDir() {
 		return []os.FileInfo{fileInfo}, false, nil
 	}
 
 	dir, err := os.Open(folderPath)
 	if err != nil {
+		//fmt.Println("here")
 		return nil, false, err
 	}
 	defer dir.Close()
@@ -91,23 +92,35 @@ func ExtractContent(folderPath string) ([]os.FileInfo, bool, error) {
 	return content, true, nil
 }
 
+func GroupFlags(flags []string) string {
+	rerult := ""
+	for _, flag := range flags {
+		for _, char := range flag {
+			if char != '-' {
+				rerult += string(char)
+			}
+		}
+	}
+	return rerult
+}
+
 // PrintContent prints the contents of a directory based on the provided flags.
-func PrintContent(flags []string, content []os.FileInfo) {
+func PrintContent(flagsGrouped string, content []os.FileInfo) {
 	// Apply sorting and filtering based on flags
-	if containsFlag(flags, "-t") {
+	if containsFlag(flagsGrouped, "t") {
 		sort.Slice(content, func(i, j int) bool {
 			return content[i].ModTime().After(content[j].ModTime())
 		})
 	}
-	if containsFlag(flags, "-r") {
+	if containsFlag(flagsGrouped, "r") {
 		sort.Slice(content, func(i, j int) bool {
 			return content[i].Name() > content[j].Name()
 		})
 	}
 
 	for _, file := range content {
-		if containsFlag(flags, "-a") || !strings.HasPrefix(file.Name(), ".") {
-			if containsFlag(flags, "-l") {
+		if containsFlag(flagsGrouped, "a") || !strings.HasPrefix(file.Name(), ".") {
+			if containsFlag(flagsGrouped, "l") {
 				fmt.Printf("%s\t%d\t%s\t%s\n", file.Mode(), file.Size(), file.ModTime().Format(time.RFC3339), file.Name())
 			} else {
 				fmt.Println(file.Name())
@@ -117,7 +130,7 @@ func PrintContent(flags []string, content []os.FileInfo) {
 }
 
 // R recursively lists the contents of directories.
-func R(folderPath string, flags []string) {
+func R(folderPath string, flagsGrouped string) {
 	content, isDir, err := ExtractContent(folderPath)
 	if err != nil {
 		fmt.Println(err)
@@ -125,11 +138,11 @@ func R(folderPath string, flags []string) {
 	}
 
 	if isDir {
-		fmt.Printf("\n%s:\n", folderPath)
-		PrintContent(flags, content)
+		fmt.Printf("%s:\n", folderPath)
+		PrintContent(flagsGrouped, content)
 		for _, file := range content {
 			if file.IsDir() {
-				R(fmt.Sprintf("%s/%s", folderPath, file.Name()), flags)
+				R(fmt.Sprintf("%s/%s", folderPath, file.Name()), flagsGrouped)
 			}
 		}
 	}
@@ -137,29 +150,29 @@ func R(folderPath string, flags []string) {
 
 // Ls handles the main logic of listing files and directories.
 func Ls(flags, foldersPath []string) {
+	flagsGrouped := GroupFlags(flags)
 	for _, folderPath := range foldersPath {
 		content, isDir, err := ExtractContent(folderPath)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
+		if isDir && containsFlag(flagsGrouped, "R") {
+			R(folderPath, flagsGrouped)
 
-		if isDir && len(foldersPath) > 1 {
-			fmt.Printf("\n%s:\n", folderPath)
-		}
-
-		PrintContent(flags, content)
-
-		if isDir && containsFlag(flags, "-R") {
-			R(folderPath, flags)
+		} else if isDir && !containsFlag(flagsGrouped, "R") {
+			if isDir && len(foldersPath) > 1 {
+				fmt.Printf("%s:\n", folderPath)
+			}
+			PrintContent(flagsGrouped, content)
 		}
 	}
 }
 
 // containsFlag checks if a specific flag is present in the flags slice.
-func containsFlag(flags []string, flag string) bool {
+func containsFlag(flags string, flag string) bool {
 	for _, f := range flags {
-		if f == flag {
+		if string(f) == flag {
 			return true
 		}
 	}
