@@ -148,6 +148,8 @@ func R(folderPath string, flagsGrouped string) {
 	}
 }
 
+//var test int = 1
+
 // Ls handles the main logic of listing files and directories.
 func Ls(flags, foldersPath []string) {
 	flagsGrouped := GroupFlags(flags)

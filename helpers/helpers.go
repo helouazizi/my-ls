@@ -104,6 +104,15 @@ func PrintContent(flagsGrouped string, content []os.FileInfo) {
 		})
 	}
 
+	if containsFlag(flagsGrouped, "l") {
+		// lets print the total of the folder size
+		total := 0
+		for _, file := range content {
+			total += int(file.Size() / 512)
+		}
+		fmt.Println("total: ", total)
+	}
+
 	for _, file := range content {
 		if containsFlag(flagsGrouped, "a") || !strings.HasPrefix(file.Name(), ".") {
 			if containsFlag(flagsGrouped, "l") {
@@ -127,8 +136,6 @@ func R(folderPath string, flagsGrouped string) {
 
 	if isDir {
 		fmt.Printf("%s:\n", folderPath)
-		// lets print the total of the folder size
-		fmt.Println("total: ", len(content))
 		PrintContent(flagsGrouped, content)
 		for _, file := range content {
 			if file.IsDir() {
@@ -147,7 +154,9 @@ func Ls(flags, foldersPath []string) {
 			fmt.Println(err)
 			continue
 		}
+
 		if isDir && containsFlag(flagsGrouped, "R") {
+			//fmt.Printf("%s:\n", folderPath)
 			R(folderPath, flagsGrouped)
 		} else if isDir && !containsFlag(flagsGrouped, "R") {
 			PrintContent(flagsGrouped, content)
