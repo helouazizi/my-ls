@@ -94,6 +94,7 @@ func GroupFlags(flags []string) string {
 // PrintContent prints the contents of a directory based on the provided flags.
 func PrintContent(flagsGrouped string, content []os.FileInfo) {
 	// Apply sorting and filtering based on flags
+	// lets sort the content by time if -t exist
 	if containsFlag(flagsGrouped, "t") {
 		sort.Slice(content, func(i, j int) bool {
 			return content[i].ModTime().After(content[j].ModTime())
