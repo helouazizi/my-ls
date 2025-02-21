@@ -4,17 +4,13 @@ package main
 import (
 	"fmt"
 	"myls/helpers"
+	"os"
 )
 
 func main() {
-	falgs, foldersPath, err := helpers.Scan()
-	if err != nil {
-		fmt.Println(err)
-		return
+	opts, directory := helpers.ParseFlags(os.Args[1:])
+	if err := helpers.ListDirectory(directory, opts); err != nil {
+		fmt.Println("Error:", err)
 	}
-	if len(foldersPath) == 0 {
-		foldersPath = append(foldersPath, ".")
-	}
-	helpers.Ls(falgs, foldersPath)
 
 }
