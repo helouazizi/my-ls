@@ -72,6 +72,23 @@ func getfiles(directory string, options Options) ([]FileInfo, error) {
 
 	return files, nil
 }
+func sortFiles(files *[]FileInfo, opts Options) {
+	if opts.TimeSort {
+		sort.Slice(*files, func(i, j int) bool {
+			return (*files)[i].ModTime.After((*files)[j].ModTime)
+		})
+	} else {
+		sort.Slice(*files, func(i, j int) bool {
+			return (*files)[i].Name < (*files)[j].Name
+		})
+	}
+
+	if opts.Reverse {
+		sort.SliceStable(*files, func(i, j int) bool {
+			return !((*files)[i].ModTime.Before((*files)[j].ModTime))
+		})
+	}
+}
 
 // Scan parses command-line arguments and extracts flags and folder paths.
 func Scan() (string, []string, error) {
