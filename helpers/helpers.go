@@ -2,12 +2,76 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/user"
 	"sort"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
+
+type FileInfo struct {
+	Name    string
+	Mode    fs.FileMode
+	Size    int64
+	ModTime time.Time
+	IsDir   bool
+	Owner   string
+	Group   string
+}
+
+type Options struct {
+	Long      bool
+	Recursive bool
+	All       bool
+	Reverse   bool
+	TimeSort  bool
+}
+
+func getfiles(directory string, options Options) ([]FileInfo, error) {
+	dir_entries, err := os.ReadDir(directory)
+	if err != nil {
+		return nil, err
+	}
+	var files []FileInfo
+	for _, file := range dir_entries {
+		// lets ignore the hiden files id -a not exist
+		if !options.All && strings.HasPrefix(file.Name(), ".") {
+			continue
+		}
+		//lets exytact file info
+		info, err := file.Info()
+		if err != nil {
+			return nil, err
+		}
+		//nkow lets get ths file stat using syscall
+		status, ok := info.Sys().(*syscall.Stat_t)
+		if !ok {
+			return nil, errors.New("failed to get file stats")
+		}
+		// nkow we can extract user and group inforamtions
+		user_info, _ := user.Lookup(strconv.Itoa(int(status.Uid)))
+		grp_info, _ := user.Lookup(strconv.Itoa(int(status.Gid)))
+
+		// nkow lets fill the fileinfo struct we all information about this dir
+		files = append(files, FileInfo{
+			Name:    info.Name(),
+			Mode:    info.Mode(),
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+			IsDir:   info.IsDir(),
+			Owner:   user_info.Username,
+			Group:   grp_info.Username,
+		})
+
+	}
+
+	return files, nil
+}
 
 // Scan parses command-line arguments and extracts flags and folder paths.
 func Scan() (string, []string, error) {
