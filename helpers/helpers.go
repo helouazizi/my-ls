@@ -32,7 +32,7 @@ type Options struct {
 	TimeSort  bool
 }
 
-func getfiles(directory string, options Options) ([]FileInfo, error) {
+func Setfiles(directory string, options Options) ([]FileInfo, error) {
 	dir_entries, err := os.ReadDir(directory)
 	if err != nil {
 		return nil, err
@@ -69,10 +69,11 @@ func getfiles(directory string, options Options) ([]FileInfo, error) {
 		})
 
 	}
+	SortFiles(&files, options)
 
 	return files, nil
 }
-func sortFiles(files *[]FileInfo, opts Options) {
+func SortFiles(files *[]FileInfo, opts Options) {
 	if opts.TimeSort {
 		sort.Slice(*files, func(i, j int) bool {
 			return (*files)[i].ModTime.After((*files)[j].ModTime)
