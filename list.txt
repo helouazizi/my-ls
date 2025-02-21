@@ -2,3 +2,6 @@ list.txt
 work on the text flags
 becarefull --rec or --rev will be used to reverse the text
 so you dont neeed to handle other casesces just the subject one
+blocks= file size+511 / 511
+​
+ 

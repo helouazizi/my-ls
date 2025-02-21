@@ -18,6 +18,7 @@ type FileInfo struct {
 	Name    string
 	Mode    fs.FileMode
 	Size    int64
+	Blocks  int64 // Store block count
 	ModTime time.Time
 	IsDir   bool
 	Owner   string
@@ -32,9 +33,10 @@ type Options struct {
 	TimeSort  bool
 }
 
-func ParseFlags(args []string) (Options, string) {
+func ParseFlags(args []string) (Options, []string) {
 	opts := Options{}
-	dir := "."
+	var dirs []string
+
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") {
 			for _, char := range arg[1:] {
@@ -52,53 +54,71 @@ func ParseFlags(args []string) (Options, string) {
 				}
 			}
 		} else {
-			dir = arg
+			dirs = append(dirs, arg)
 		}
 	}
-	return opts, dir
+
+	if len(dirs) == 0 {
+		dirs = append(dirs, ".")
+	}
+
+	return opts, dirs
 }
 
-func Getfiles(directory string, options Options) ([]FileInfo, error) {
+func GetFiles(directory string, options Options) ([]FileInfo, error) {
 	dir_entries, err := os.ReadDir(directory)
 	if err != nil {
 		return nil, err
 	}
 	var files []FileInfo
+	//var totalSize int64 = 0
+
 	for _, file := range dir_entries {
-		// lets ignore the hiden files id -a not exist
 		if !options.All && strings.HasPrefix(file.Name(), ".") {
 			continue
 		}
-		//lets exytact file info
+
 		info, err := file.Info()
 		if err != nil {
 			return nil, err
 		}
-		//nkow lets get ths file stat using syscall
+
 		status, ok := info.Sys().(*syscall.Stat_t)
 		if !ok {
 			return nil, errors.New("failed to get file stats")
 		}
-		// nkow we can extract user and group inforamtions
-		user_info, _ := user.Lookup(strconv.Itoa(int(status.Uid)))
-		grp_info, _ := user.Lookup(strconv.Itoa(int(status.Gid)))
+		// Extract st_blocks instead of just size
+		blocks := int64(status.Blocks) // st_blocks represents 512-byte blocks
 
-		// nkow lets fill the fileinfo struct we all information about this dir
+		user_info, err := user.Lookup(strconv.Itoa(int(status.Uid)))
+		owner := "unknown"
+		if err == nil {
+			owner = user_info.Username
+		}
+
+		grp_info, err := user.Lookup(strconv.Itoa(int(status.Gid)))
+		group := "unknown"
+		if err == nil {
+			group = grp_info.Username
+		}
+
+		//totalSize += info.Size()
 		files = append(files, FileInfo{
 			Name:    info.Name(),
 			Mode:    info.Mode(),
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
+			Blocks:  blocks,
 			IsDir:   info.IsDir(),
-			Owner:   user_info.Username,
-			Group:   grp_info.Username,
+			Owner:   owner,
+			Group:   group,
 		})
-
 	}
-	SortFiles(&files, options)
 
+	SortFiles(&files, options)
 	return files, nil
 }
+
 func SortFiles(files *[]FileInfo, opts Options) {
 	if opts.TimeSort {
 		sort.Slice(*files, func(i, j int) bool {
@@ -117,22 +137,35 @@ func SortFiles(files *[]FileInfo, opts Options) {
 	}
 }
 func PrintFiles(files []FileInfo, opts Options) {
+	
 	for _, file := range files {
 		if opts.Long {
 			fmt.Printf("%s %s %s %10d %s %s\n", file.Mode, file.Owner, file.Group, file.Size, file.ModTime.Format("Jan 02 15:04"), file.Name)
 		} else {
 			fmt.Println(file.Name)
 		}
+		fmt.Println()
 	}
 }
 func ListDirectory(directory string, opts Options) error {
-	files, err := Getfiles(directory, opts)
+	files, err := GetFiles(directory, opts)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%s:\n", directory)
-	PrintFiles(files, opts)
+	// Calculate total block size
+	var totalBlocks int64
+	for _, file := range files {
+		totalBlocks += file.Blocks
+	}
+
+	if opts.Long {
+		fmt.Printf("%s:\ntotal %d\n", directory, totalBlocks/2) // Convert blocks to 1024-byte units
+	} else {
+		fmt.Printf("%s:\n", directory)
+	}
+
+	PrintFiles(files ,opts)
 
 	if opts.Recursive {
 		for _, file := range files {
@@ -143,5 +176,3 @@ func ListDirectory(directory string, opts Options) error {
 	}
 	return nil
 }
-
-

@@ -8,9 +8,12 @@ import (
 )
 
 func main() {
-	opts, directory := helpers.ParseFlags(os.Args[1:])
-	if err := helpers.ListDirectory(directory, opts); err != nil {
-		fmt.Println("Error:", err)
+	opts, directories := helpers.ParseFlags(os.Args[1:])
+	for _, dir := range directories {
+		if err := helpers.ListDirectory(dir, opts); err != nil {
+			fmt.Println("Error:", err)
+		}
+
 	}
 
 }
