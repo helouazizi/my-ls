@@ -169,16 +169,26 @@ func SortFiles(files *[]FileInfo, opts Options) {
 }
 
 func PrintFiles(files []FileInfo, opts Options) {
+
 	for _, file := range files {
+
 		if opts.Long {
 			fmt.Printf("%s %d %s %s %4d %s %s\n", file.Mode, file.HardLinks, file.Owner, file.Group, file.Size, file.ModTime.Format("Jan 02 15:04"), file.Name)
 		} else {
 			fmt.Printf("%s  ", file.Name)
 		}
 	}
+	// this part should be handled
+	alredy := true
 	if !opts.Long {
+		alredy = false
+		fmt.Println()
+	} else if alredy && opts.Long && opts.Recursive {
+		fmt.Println()
+	} else if alredy && opts.Recursive {
 		fmt.Println()
 	}
+
 }
 
 func ListDirectory(directory string, opts Options) error {
@@ -186,17 +196,16 @@ func ListDirectory(directory string, opts Options) error {
 	if err != nil {
 		return err
 	}
-
 	// Calculate total block size
 	var totalBlocks int64
 	for _, file := range files {
 		totalBlocks += file.Blocks
 	}
-
+	if opts.Recursive {
+		fmt.Printf("%s:\n", directory)
+	}
 	if opts.Long {
 		fmt.Printf("total %d\n" /* directory,*/, totalBlocks/2) // Convert blocks to 1024-byte units
-	} else {
-		fmt.Printf("%s:\n", directory)
 	}
 
 	PrintFiles(files, opts)
