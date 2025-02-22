@@ -15,14 +15,15 @@ import (
 )
 
 type FileInfo struct {
-	Name    string
-	Mode    fs.FileMode
-	Size    int64
-	Blocks  int64 // Store block count
-	ModTime time.Time
-	IsDir   bool
-	Owner   string
-	Group   string
+	Name      string
+	Mode      fs.FileMode
+	Size      int64
+	Blocks    int64 // Store block count
+	ModTime   time.Time
+	IsDir     bool
+	Owner     string
+	Group     string
+	HardLinks int64
 }
 
 type Options struct {
@@ -33,12 +34,25 @@ type Options struct {
 	TimeSort  bool
 }
 
-func ParseFlags(args []string) (Options, []string) {
+func ParseFlags(args []string) (Options, []string, error) {
 	opts := Options{}
 	var dirs []string
 
 	for _, arg := range args {
-		if strings.HasPrefix(arg, "-") {
+		if strings.HasPrefix(arg, "--") {
+			if arg == "--rev" || arg == "--reverse" {
+				opts.Reverse = true
+			} else if arg == "--rec" || arg == "--recursive" {
+				opts.Recursive = true
+			} else {
+				fmt.Println("ls: option '--h' is ambiguous;")
+				// break
+				return Options{}, nil, errors.New("invalid option")
+			}
+			// should handle the error
+			// ls: option '--h' is ambiguous; possibilities: '--human-readable' '--hide-control-chars' '--hide' '--hyperlink' '--help'
+			// Try 'ls --help' for more information.
+		} else if strings.HasPrefix(arg, "-") {
 			for _, char := range arg[1:] {
 				switch char {
 				case 'l':
@@ -51,6 +65,8 @@ func ParseFlags(args []string) (Options, []string) {
 					opts.Reverse = true
 				case 't':
 					opts.TimeSort = true
+				default:
+					return Options{}, nil, errors.New("invalid option")
 				}
 			}
 		} else {
@@ -62,7 +78,7 @@ func ParseFlags(args []string) (Options, []string) {
 		dirs = append(dirs, ".")
 	}
 
-	return opts, dirs
+	return opts, dirs, nil
 }
 
 func GetFiles(directory string, options Options) ([]FileInfo, error) {
@@ -71,7 +87,7 @@ func GetFiles(directory string, options Options) ([]FileInfo, error) {
 		return nil, err
 	}
 	var files []FileInfo
-	//var totalSize int64 = 0
+	// var totalSize int64 = 0
 
 	for _, file := range dir_entries {
 		if !options.All && strings.HasPrefix(file.Name(), ".") {
@@ -89,29 +105,32 @@ func GetFiles(directory string, options Options) ([]FileInfo, error) {
 		}
 		// Extract st_blocks instead of just size
 		blocks := int64(status.Blocks) // st_blocks represents 512-byte blocks
+		// lets extract the hardlinkd count
+		links := status.Nlink
 
-		user_info, err := user.Lookup(strconv.Itoa(int(status.Uid)))
+		user_info, err := user.LookupId(strconv.Itoa(int(status.Uid)))
 		owner := "unknown"
 		if err == nil {
 			owner = user_info.Username
 		}
 
-		grp_info, err := user.Lookup(strconv.Itoa(int(status.Gid)))
+		grp_info, err := user.LookupGroupId(strconv.Itoa(int(status.Gid)))
 		group := "unknown"
 		if err == nil {
-			group = grp_info.Username
+			group = grp_info.Name
 		}
 
-		//totalSize += info.Size()
+		// totalSize += info.Size()
 		files = append(files, FileInfo{
-			Name:    info.Name(),
-			Mode:    info.Mode(),
-			ModTime: info.ModTime(),
-			Size:    info.Size(),
-			Blocks:  blocks,
-			IsDir:   info.IsDir(),
-			Owner:   owner,
-			Group:   group,
+			Name:      info.Name(),
+			Mode:      info.Mode(),
+			ModTime:   info.ModTime(),
+			Size:      info.Size(),
+			Blocks:    blocks,
+			IsDir:     info.IsDir(),
+			Owner:     owner,
+			Group:     group,
+			HardLinks: int64(links),
 		})
 	}
 
@@ -136,17 +155,19 @@ func SortFiles(files *[]FileInfo, opts Options) {
 		})
 	}
 }
+
 func PrintFiles(files []FileInfo, opts Options) {
-	
 	for _, file := range files {
 		if opts.Long {
-			fmt.Printf("%s %s %s %10d %s %s\n", file.Mode, file.Owner, file.Group, file.Size, file.ModTime.Format("Jan 02 15:04"), file.Name)
+			fmt.Printf("%s %d %s %s %4d %s %s\n", file.Mode, file.HardLinks, file.Owner, file.Group, file.Size, file.ModTime.Format("Jan 02 15:04"), file.Name)
 		} else {
-			fmt.Println(file.Name)
+			fmt.Printf("%s  ", file.Name)
 		}
-		fmt.Println()
+		// fmt.Println()
 	}
+	fmt.Println()
 }
+
 func ListDirectory(directory string, opts Options) error {
 	files, err := GetFiles(directory, opts)
 	if err != nil {
@@ -162,10 +183,10 @@ func ListDirectory(directory string, opts Options) error {
 	if opts.Long {
 		fmt.Printf("%s:\ntotal %d\n", directory, totalBlocks/2) // Convert blocks to 1024-byte units
 	} else {
-		fmt.Printf("%s:\n", directory)
+		// fmt.Printf("%s:\n", directory)
 	}
 
-	PrintFiles(files ,opts)
+	PrintFiles(files, opts)
 
 	if opts.Recursive {
 		for _, file := range files {
