@@ -14,9 +14,6 @@ import (
 	"time"
 )
 
-type Erors struct {
-	Help_Msg string
-}
 
 var Help_msg = `Usage: my-ls [OPTION]... [FILE]...
 List information about the FILEs (the current directory by default).
@@ -99,7 +96,16 @@ func GetFiles(directory string, options Options) ([]FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var files []FileInfo
+	// Include "." and ".." directories
+	dotFiles := []string{".", ".."}
+	for _, name := range dotFiles {
+		info, err := os.Stat(directory + "/" + name)
+		if err == nil { // Only add if accessible
+			files = append(files, getFileInfo(info))
+		}
+	}
 
 	for _, file := range dir_entries {
 		if !options.All && strings.HasPrefix(file.Name(), ".") {
@@ -110,40 +116,7 @@ func GetFiles(directory string, options Options) ([]FileInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		status, ok := info.Sys().(*syscall.Stat_t)
-		if !ok {
-			return nil, errors.New("failed to get file stats")
-		}
-		// Extract st_blocks instead of just size
-		blocks := int64(status.Blocks) // st_blocks represents 512-byte blocks
-		// lets extract the hardlinkd count
-		links := status.Nlink
-
-		user_info, err := user.LookupId(strconv.Itoa(int(status.Uid)))
-		owner := "unknown"
-		if err == nil {
-			owner = user_info.Username
-		}
-
-		grp_info, err := user.LookupGroupId(strconv.Itoa(int(status.Gid)))
-		group := "unknown"
-		if err == nil {
-			group = grp_info.Name
-		}
-
-		// totalSize += info.Size()
-		files = append(files, FileInfo{
-			Name:      info.Name(),
-			Mode:      info.Mode(),
-			ModTime:   info.ModTime(),
-			Size:      info.Size(),
-			Blocks:    blocks,
-			IsDir:     info.IsDir(),
-			Owner:     owner,
-			Group:     group,
-			HardLinks: int64(links),
-		})
+		files = append(files, getFileInfo(info))
 	}
 
 	SortFiles(&files, options)
@@ -212,10 +185,41 @@ func ListDirectory(directory string, opts Options) error {
 
 	if opts.Recursive {
 		for _, file := range files {
-			if file.IsDir {
+			if file.IsDir && file.Name != "." && file.Name != ".." {
 				ListDirectory(directory+"/"+file.Name, opts)
 			}
 		}
 	}
 	return nil
+}
+
+// Helper function to extract file info
+func getFileInfo(info fs.FileInfo) FileInfo {
+	status, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		panic("failed to get file stats") // Should never happen
+	}
+
+	blocks := int64(status.Blocks) // 512-byte blocks
+	links := status.Nlink
+
+	owner, group := "unknown", "unknown"
+	if userInfo, err := user.LookupId(strconv.Itoa(int(status.Uid))); err == nil {
+		owner = userInfo.Username
+	}
+	if grpInfo, err := user.LookupGroupId(strconv.Itoa(int(status.Gid))); err == nil {
+		group = grpInfo.Name
+	}
+
+	return FileInfo{
+		Name:      info.Name(),
+		Mode:      info.Mode(),
+		ModTime:   info.ModTime(),
+		Size:      info.Size(),
+		Blocks:    blocks,
+		IsDir:     info.IsDir(),
+		Owner:     owner,
+		Group:     group,
+		HardLinks: int64(links),
+	}
 }
