@@ -14,6 +14,20 @@ import (
 	"time"
 )
 
+type Erors struct {
+	Help_Msg string
+}
+
+var Help_msg = `Usage: my-ls [OPTION]... [FILE]...
+List information about the FILEs (the current directory by default).
+
+Mandatory arguments to long options are mandatory for short options too.
+  -a, --all                  do not ignore entries starting with .
+  -l                         use a long listing format
+  -r, --reverse              reverse order while sorting
+  -R, --recursive            list subdirectories recursively
+  -t                         sort by time, newest first; see --time`
+
 type FileInfo struct {
 	Name      string
 	Mode      fs.FileMode
@@ -44,14 +58,13 @@ func ParseFlags(args []string) (Options, []string, error) {
 				opts.Reverse = true
 			} else if arg == "--rec" || arg == "--recursive" {
 				opts.Recursive = true
+			} else if arg == "--all " {
+				opts.All = true
+			} else if arg == "--help" {
+				return Options{}, nil, errors.New(Help_msg)
 			} else {
-				fmt.Println("ls: option '--h' is ambiguous;")
-				// break
-				return Options{}, nil, errors.New("invalid option")
+				return Options{}, nil, fmt.Errorf("my-ls: option '%s' is ambiguous.\nTry 'my-ls --help' for more information", arg)
 			}
-			// should handle the error
-			// ls: option '--h' is ambiguous; possibilities: '--human-readable' '--hide-control-chars' '--hide' '--hyperlink' '--help'
-			// Try 'ls --help' for more information.
 		} else if strings.HasPrefix(arg, "-") {
 			for _, char := range arg[1:] {
 				switch char {
@@ -66,7 +79,7 @@ func ParseFlags(args []string) (Options, []string, error) {
 				case 't':
 					opts.TimeSort = true
 				default:
-					return Options{}, nil, errors.New("invalid option")
+					return Options{}, nil, fmt.Errorf("my-ls: invalid option -- '%s'\nTry 'my-ls --help' for more information", arg)
 				}
 			}
 		} else {
