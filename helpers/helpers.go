@@ -163,9 +163,10 @@ func PrintFiles(files []FileInfo, opts Options) {
 		} else {
 			fmt.Printf("%s  ", file.Name)
 		}
-		// fmt.Println()
 	}
-	fmt.Println()
+	if !opts.Long {
+		fmt.Println()
+	}
 }
 
 func ListDirectory(directory string, opts Options) error {
@@ -181,9 +182,9 @@ func ListDirectory(directory string, opts Options) error {
 	}
 
 	if opts.Long {
-		fmt.Printf("%s:\ntotal %d\n", directory, totalBlocks/2) // Convert blocks to 1024-byte units
+		fmt.Printf("total %d\n" /* directory,*/, totalBlocks/2) // Convert blocks to 1024-byte units
 	} else {
-		// fmt.Printf("%s:\n", directory)
+		fmt.Printf("%s:\n", directory)
 	}
 
 	PrintFiles(files, opts)
