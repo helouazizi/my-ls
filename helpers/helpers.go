@@ -100,7 +100,6 @@ func GetFiles(directory string, options Options) ([]FileInfo, error) {
 		return nil, err
 	}
 	var files []FileInfo
-	// var totalSize int64 = 0
 
 	for _, file := range dir_entries {
 		if !options.All && strings.HasPrefix(file.Name(), ".") {
