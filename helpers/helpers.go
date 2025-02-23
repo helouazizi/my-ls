@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"os/user"
-	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -118,19 +117,16 @@ func GetFiles(directory string, options Options) ([]FileInfo, error) {
 		files = append(files, getFileInfo(info))
 	}
 
-	 SortFiles(&files, options)
+	SortFiles(&files, options)
 	return files, nil
 }
 
 func SortFiles(files *[]FileInfo, opts Options) {
 	if opts.TimeSort {
 		Sort_by_Time(files)
-	 } 
-
+	}
 	if opts.Reverse {
-		sort.SliceStable(*files, func(i, j int) bool {
-			return !((*files)[i].ModTime.Before((*files)[j].ModTime))
-		})
+		Sort_by_reverse(files)
 	}
 }
 
@@ -212,11 +208,23 @@ func getFileInfo(info fs.FileInfo) FileInfo {
 
 func Sort_by_Time(files *[]FileInfo) {
 	for i := 0; i < len(*files); i++ {
-		for j := i+1 ; j < len(*files); j++ {
+		for j := i + 1; j < len(*files); j++ {
 			time1 := (*files)[i].ModTime
 			time2 := (*files)[j].ModTime
 			if time2.After(time1) {
-				(*files)[i] ,(*files)[j] = (*files)[j],(*files)[i]
+				(*files)[i], (*files)[j] = (*files)[j], (*files)[i]
+			}
+		}
+	}
+}
+
+func Sort_by_reverse(files *[]FileInfo) {
+	for i := 0; i < len(*files); i++ {
+		for j := i + 1; j < len(*files); j++ {
+			name1 := (*files)[i].Name
+			name2 := (*files)[j].Name
+			if name1 < name2 {
+				(*files)[i], (*files)[j] = (*files)[j], (*files)[i]
 			}
 		}
 	}
