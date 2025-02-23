@@ -152,7 +152,8 @@ func PrintFiles(files []FileInfo, opts Options) {
 		}
 
 	}
-	
+
+	fmt.Println()
 }
 
 func ListDirectory(directory string, opts Options) error {
