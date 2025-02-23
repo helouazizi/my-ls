@@ -118,21 +118,14 @@ func GetFiles(directory string, options Options) ([]FileInfo, error) {
 		files = append(files, getFileInfo(info))
 	}
 
-	// SortFiles(&files, options)
-	Sort_by_Time(&files)
+	 SortFiles(&files, options)
 	return files, nil
 }
 
 func SortFiles(files *[]FileInfo, opts Options) {
 	if opts.TimeSort {
-		sort.Slice(*files, func(i, j int) bool {
-			return (*files)[i].ModTime.After((*files)[j].ModTime)
-		})
-	} else {
-		sort.Slice(*files, func(i, j int) bool {
-			return (*files)[i].Name < (*files)[j].Name
-		})
-	}
+		Sort_by_Time(files)
+	 } 
 
 	if opts.Reverse {
 		sort.SliceStable(*files, func(i, j int) bool {
@@ -219,18 +212,12 @@ func getFileInfo(info fs.FileInfo) FileInfo {
 
 func Sort_by_Time(files *[]FileInfo) {
 	for i := 0; i < len(*files); i++ {
-		// file := (*files)[i]
-		// time1 := (*files)[i].ModTime
-		// //time2 := (*files)[j].ModTime
-		// fmt.Println(time1, "here")
-		// break
-		for j := i + 1; j < len(*files); j++ {
+		for j := i+1 ; j < len(*files); j++ {
 			time1 := (*files)[i].ModTime
 			time2 := (*files)[j].ModTime
 			if time2.After(time1) {
 				(*files)[i] ,(*files)[j] = (*files)[j],(*files)[i]
 			}
-			
 		}
 	}
 }

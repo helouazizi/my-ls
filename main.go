@@ -12,7 +12,7 @@ func main() {
 	opts, directories, err := helpers.ParseFlags(os.Args[1:])
 	if err != nil {
 		fmt.Println(err)
-		return
+		return ///
 	}
 	for _, dir := range directories {
 		if err := helpers.ListDirectory(dir, opts); err != nil {
