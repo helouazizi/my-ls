@@ -118,7 +118,8 @@ func GetFiles(directory string, options Options) ([]FileInfo, error) {
 		files = append(files, getFileInfo(info))
 	}
 
-	SortFiles(&files, options)
+	// SortFiles(&files, options)
+	Sort_by_Time(&files)
 	return files, nil
 }
 
@@ -213,5 +214,23 @@ func getFileInfo(info fs.FileInfo) FileInfo {
 		Owner:     owner,
 		Group:     group,
 		HardLinks: int64(links),
+	}
+}
+
+func Sort_by_Time(files *[]FileInfo) {
+	for i := 0; i < len(*files); i++ {
+		// file := (*files)[i]
+		// time1 := (*files)[i].ModTime
+		// //time2 := (*files)[j].ModTime
+		// fmt.Println(time1, "here")
+		// break
+		for j := i + 1; j < len(*files); j++ {
+			time1 := (*files)[i].ModTime
+			time2 := (*files)[j].ModTime
+			if time2.After(time1) {
+				(*files)[i] ,(*files)[j] = (*files)[j],(*files)[i]
+			}
+			
+		}
 	}
 }
