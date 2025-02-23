@@ -16,7 +16,7 @@ func main() {
 	}
 	for _, dir := range directories {
 		if err := helpers.ListDirectory(dir, opts); err != nil {
-			fmt.Println("Error:", err)
+			fmt.Println(err)
 		}
 	}
 }

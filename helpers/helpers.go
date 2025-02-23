@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-
 var Help_msg = `Usage: my-ls [OPTION]... [FILE]...
 List information about the FILEs (the current directory by default).
 
@@ -94,7 +93,7 @@ func ParseFlags(args []string) (Options, []string, error) {
 func GetFiles(directory string, options Options) ([]FileInfo, error) {
 	dir_entries, err := os.ReadDir(directory)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("my-ls: cannot access '%s': No such file or directory", directory)
 	}
 
 	var files []FileInfo
@@ -142,26 +141,18 @@ func SortFiles(files *[]FileInfo, opts Options) {
 }
 
 func PrintFiles(files []FileInfo, opts Options) {
-
 	for _, file := range files {
-
+		if !opts.All && (file.Name == "." || file.Name == "..") {
+			continue
+		}
 		if opts.Long {
 			fmt.Printf("%s %d %s %s %4d %s %s\n", file.Mode, file.HardLinks, file.Owner, file.Group, file.Size, file.ModTime.Format("Jan 02 15:04"), file.Name)
 		} else {
 			fmt.Printf("%s  ", file.Name)
 		}
-	}
-	// this part should be handled
-	alredy := true
-	if !opts.Long {
-		alredy = false
-		fmt.Println()
-	} else if alredy && opts.Long && opts.Recursive {
-		fmt.Println()
-	} else if alredy && opts.Recursive {
-		fmt.Println()
-	}
 
+	}
+	
 }
 
 func ListDirectory(directory string, opts Options) error {
@@ -174,11 +165,11 @@ func ListDirectory(directory string, opts Options) error {
 	for _, file := range files {
 		totalBlocks += file.Blocks
 	}
-	if opts.Recursive {
-		fmt.Printf("%s:\n", directory)
-	}
 	if opts.Long {
-		fmt.Printf("total %d\n" /* directory,*/, totalBlocks/2) // Convert blocks to 1024-byte units
+		fmt.Printf("%s:\ntotal %d\n", directory, totalBlocks/2) // Convert blocks to 1024-byte units
+	}
+	if !opts.Long && opts.Recursive {
+		fmt.Printf("%s:\n", directory)
 	}
 
 	PrintFiles(files, opts)
